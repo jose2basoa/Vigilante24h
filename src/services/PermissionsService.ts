@@ -2,114 +2,103 @@ import * as Camera from 'expo-camera'
 import * as Location from 'expo-location'
 import * as Contacts from 'expo-contacts'
 import * as MediaLibrary from 'expo-media-library'
-import * as Notifications from 'expo-notifications'
+import { Alert } from 'react-native'
 
-export class PermissionsService {
-  static async requestAllPermissions(): Promise<{
-    camera: boolean
-    location: boolean
-    contacts: boolean
-    mediaLibrary: boolean
-    notifications: boolean
-  }> {
-    const results = {
-      camera: false,
-      location: false,
-      contacts: false,
-      mediaLibrary: false,
-      notifications: false,
+export async function requestPermissions(): Promise<boolean> {
+  try {
+    // Solicitar permissão de câmera
+    const cameraStatus = await Camera.requestCameraPermissionsAsync()
+    if (!cameraStatus.granted) {
+      Alert.alert(
+        'Permissão de Câmera',
+        'O Vigilante 24h precisa acessar a câmera para gravar vídeos de proteção.',
+        [{ text: 'OK' }]
+      )
+      return false
     }
 
-    try {
-      // Câmera
-      const cameraStatus = await Camera.requestCameraPermissionsAsync()
-      results.camera = cameraStatus.status === 'granted'
-
-      // Localização (foreground e background)
-      const locationForeground = await Location.requestForegroundPermissionsAsync()
-      if (locationForeground.status === 'granted') {
-        const locationBackground = await Location.requestBackgroundPermissionsAsync()
-        results.location = locationBackground.status === 'granted'
-      }
-
-      // Contatos
-      const contactsStatus = await Contacts.requestPermissionsAsync()
-      results.contacts = contactsStatus.status === 'granted'
-
-      // Galeria/Armazenamento
-      const mediaLibraryStatus = await MediaLibrary.requestPermissionsAsync()
-      results.mediaLibrary = mediaLibraryStatus.status === 'granted'
-
-      // Notificações
-      const notificationsStatus = await Notifications.requestPermissionsAsync()
-      results.notifications = notificationsStatus.status === 'granted'
-
-      return results
-    } catch (error) {
-      console.error('Erro ao solicitar permissões:', error)
-      return results
-    }
-  }
-
-  static async checkAllPermissions(): Promise<{
-    camera: boolean
-    location: boolean
-    contacts: boolean
-    mediaLibrary: boolean
-    notifications: boolean
-  }> {
-    const results = {
-      camera: false,
-      location: false,
-      contacts: false,
-      mediaLibrary: false,
-      notifications: false,
+    // Solicitar permissão de microfone
+    const microphoneStatus = await Camera.requestMicrophonePermissionsAsync()
+    if (!microphoneStatus.granted) {
+      Alert.alert(
+        'Permissão de Microfone',
+        'O Vigilante 24h precisa acessar o microfone para gravar áudio.',
+        [{ text: 'OK' }]
+      )
+      return false
     }
 
-    try {
-      const cameraStatus = await Camera.getCameraPermissionsAsync()
-      results.camera = cameraStatus.status === 'granted'
-
-      const locationStatus = await Location.getForegroundPermissionsAsync()
-      results.location = locationStatus.status === 'granted'
-
-      const contactsStatus = await Contacts.getPermissionsAsync()
-      results.contacts = contactsStatus.status === 'granted'
-
-      const mediaLibraryStatus = await MediaLibrary.getPermissionsAsync()
-      results.mediaLibrary = mediaLibraryStatus.status === 'granted'
-
-      const notificationsStatus = await Notifications.getPermissionsAsync()
-      results.notifications = notificationsStatus.status === 'granted'
-
-      return results
-    } catch (error) {
-      console.error('Erro ao verificar permissões:', error)
-      return results
+    // Solicitar permissão de localização
+    const locationStatus = await Location.requestForegroundPermissionsAsync()
+    if (!locationStatus.granted) {
+      Alert.alert(
+        'Permissão de Localização',
+        'O Vigilante 24h precisa acessar sua localização para registrar onde os vídeos foram gravados e enviar sua posição em emergências.',
+        [{ text: 'OK' }]
+      )
+      return false
     }
-  }
 
-  static async requestCameraPermission(): Promise<boolean> {
-    const { status } = await Camera.requestCameraPermissionsAsync()
-    return status === 'granted'
-  }
-
-  static async requestLocationPermission(): Promise<boolean> {
-    const foreground = await Location.requestForegroundPermissionsAsync()
-    if (foreground.status === 'granted') {
-      const background = await Location.requestBackgroundPermissionsAsync()
-      return background.status === 'granted'
+    // Solicitar permissão de localização em background
+    const backgroundLocationStatus = await Location.requestBackgroundPermissionsAsync()
+    if (!backgroundLocationStatus.granted) {
+      Alert.alert(
+        'Permissão de Localização em Background',
+        'Para detectar acidentes mesmo quando o app está em segundo plano, precisamos de acesso contínuo à localização.',
+        [{ text: 'OK' }]
+      )
     }
+
+    // Solicitar permissão de contatos
+    const contactsStatus = await Contacts.requestPermissionsAsync()
+    if (!contactsStatus.granted) {
+      Alert.alert(
+        'Permissão de Contatos',
+        'O Vigilante 24h precisa acessar seus contatos para enviar alertas de emergência.',
+        [{ text: 'OK' }]
+      )
+      return false
+    }
+
+    // Solicitar permissão de armazenamento (galeria)
+    const mediaLibraryStatus = await MediaLibrary.requestPermissionsAsync()
+    if (!mediaLibraryStatus.granted) {
+      Alert.alert(
+        'Permissão de Armazenamento',
+        'O Vigilante 24h precisa acessar sua galeria para salvar vídeos importantes.',
+        [{ text: 'OK' }]
+      )
+      return false
+    }
+
+    return true
+  } catch (error) {
+    console.error('Erro ao solicitar permissões:', error)
     return false
   }
+}
 
-  static async requestContactsPermission(): Promise<boolean> {
-    const { status } = await Contacts.requestPermissionsAsync()
-    return status === 'granted'
-  }
+export async function checkPermissions(): Promise<{
+  camera: boolean
+  microphone: boolean
+  location: boolean
+  backgroundLocation: boolean
+  contacts: boolean
+  mediaLibrary: boolean
+}> {
+  const cameraStatus = await Camera.getCameraPermissionsAsync()
+  const microphoneStatus = await Camera.getMicrophonePermissionsAsync()
+  const locationStatus = await Location.getForegroundPermissionsAsync()
+  const backgroundLocationStatus = await Location.getBackgroundPermissionsAsync()
+  const contactsStatus = await Contacts.getPermissionsAsync()
+  const mediaLibraryStatus = await MediaLibrary.getPermissionsAsync()
 
-  static async requestMediaLibraryPermission(): Promise<boolean> {
-    const { status } = await MediaLibrary.requestPermissionsAsync()
-    return status === 'granted'
+  return {
+    camera: cameraStatus.granted,
+    microphone: microphoneStatus.granted,
+    location: locationStatus.granted,
+    backgroundLocation: backgroundLocationStatus.granted,
+    contacts: contactsStatus.granted,
+    mediaLibrary: mediaLibraryStatus.granted,
   }
 }
